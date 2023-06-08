@@ -19,7 +19,7 @@ namespace Local.Unlock.Momentum
 	public class Plugin : BaseUnityPlugin
 	{
 		public const string identifier = "local.unlock.momentum";
-		public const string version = "0.1.1";
+		public const string version = "0.1.2";
 
 		public void Awake() => Patch();
 		private static Harmony instance = null;
@@ -88,10 +88,13 @@ namespace Local.Unlock.Momentum
 
 					delta *= 0.5f;
 				}
-				else increase -= delta / character.walkSpeed;
+				else increase -= ( 1 + increase ) / 2;
 
 				if ( increase > 1 && character.walkSpeed != 0 )
 				{
+					if ( ! character.isFlying )
+						target.y = 0;
+
 					target *= increase;
 					delta *= 1 + ( horizontal.magnitude - character.walkSpeed ) * (
 							1 - Vector3.Dot(horizontal.normalized, target.normalized)
