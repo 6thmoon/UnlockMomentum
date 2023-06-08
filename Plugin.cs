@@ -71,8 +71,8 @@ namespace Local.Unlock.Momentum
 		private static Vector3 Accelerate(
 				Vector3 velocity, Vector3 target, float delta, CharacterMotor character)
 		{
-			if ( character && character.body && character.body.isPlayerControlled &&
-					( character.isAirControlForced || ! character.isGrounded ))
+			if ( character && character.body && (
+					character.isAirControlForced || ! character.isGrounded ))
 			{
 				Vector3 horizontal = velocity;
 				horizontal.y = 0;
@@ -81,8 +81,9 @@ namespace Local.Unlock.Momentum
 
 				if ( character.disableAirControlUntilCollision )
 				{
-					if ( character.moveDirection == Vector3.zero ||
-							character.name.StartsWith(RoR2Content.Survivors.Loader.cachedName)
+					if ( ! character.body.isPlayerControlled
+							|| character.moveDirection == Vector3.zero
+							|| character.name.StartsWith("LoaderBody")
 						) return velocity;
 
 					delta *= 0.5f;
