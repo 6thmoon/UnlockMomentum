@@ -19,7 +19,7 @@ namespace Local.Unlock.Momentum
 	public class Plugin : BaseUnityPlugin
 	{
 		public const string identifier = "local.unlock.momentum";
-		public const string version = "0.1.2";
+		public const string version = "0.1.3";
 
 		public void Awake() => Patch();
 		private static Harmony instance = null;
@@ -78,15 +78,22 @@ namespace Local.Unlock.Momentum
 				horizontal.y = 0;
 
 				float increase = horizontal.magnitude / character.walkSpeed;
+				GenericSkill hook = character.body.skillLocator?.FindSkillByFamilyName(
+						"LoaderBodySecondaryFamily");
 
 				if ( character.disableAirControlUntilCollision )
 				{
 					if ( ! character.body.isPlayerControlled
 							|| character.moveDirection == Vector3.zero
-							|| character.name.StartsWith("LoaderBody")
 						) return velocity;
-
-					delta *= 0.5f;
+					else if ( hook && hook.stateMachine )
+					{
+						var state = hook.stateMachine.state as EntityStates.Loader.FireHook;
+						if ( state?.isStuck is true )
+							return velocity;
+						else delta /= Mathf.Pow(character.acceleration, 0.25f);
+					}
+					else delta *= 0.5f;
 				}
 				else increase -= ( 1 + increase ) / 2;
 
@@ -96,9 +103,12 @@ namespace Local.Unlock.Momentum
 						target.y = 0;
 
 					target *= increase;
-					delta *= 1 + ( horizontal.magnitude - character.walkSpeed ) * (
-							1 - Vector3.Dot(horizontal.normalized, target.normalized)
-						) / ( character.acceleration * 0.25f );
+					if ( hook is null )
+					{
+						delta *= 1 + ( horizontal.magnitude - character.walkSpeed ) * (
+								1 - Vector3.Dot(horizontal.normalized, target.normalized)
+							) / ( character.acceleration * 0.25f );
+					}
 
 					if ( ! character.isFlying )
 						target.y = velocity.y;
