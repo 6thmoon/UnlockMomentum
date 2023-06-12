@@ -19,7 +19,7 @@ namespace Local.Unlock.Momentum
 	public class Plugin : BaseUnityPlugin
 	{
 		public const string identifier = "local.unlock.momentum";
-		public const string version = "0.1.3";
+		public const string version = "0.1.4";
 
 		public void Awake() => Patch();
 		private static Harmony instance = null;
@@ -71,8 +71,7 @@ namespace Local.Unlock.Momentum
 		private static Vector3 Accelerate(
 				Vector3 velocity, Vector3 target, float delta, CharacterMotor character)
 		{
-			if ( character && character.body && (
-					character.isAirControlForced || ! character.isGrounded ))
+			if ( character.isAirControlForced || ! character.isGrounded )
 			{
 				Vector3 horizontal = velocity;
 				horizontal.y = 0;
@@ -95,7 +94,7 @@ namespace Local.Unlock.Momentum
 					}
 					else delta *= 0.5f;
 				}
-				else increase -= ( 1 + increase ) / 2;
+				else increase = ( 1 + increase ) / 2;
 
 				if ( increase > 1 && character.walkSpeed != 0 )
 				{
