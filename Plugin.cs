@@ -19,7 +19,7 @@ namespace Local.Unlock.Momentum
 	public class Plugin : BaseUnityPlugin
 	{
 		public const string identifier = "local.unlock.momentum";
-		public const string version = "0.1.4";
+		public const string version = "0.1.5";
 
 		public void Awake() => Patch();
 		private static Harmony instance = null;
@@ -69,30 +69,39 @@ namespace Local.Unlock.Momentum
 		}
 
 		private static Vector3 Accelerate(
-				Vector3 velocity, Vector3 target, float delta, CharacterMotor character)
+				Vector3 original, Vector3 target, float delta, CharacterMotor character)
 		{
-			if ( character.isAirControlForced || ! character.isGrounded )
+			if ( character.acceleration <= 0 ) return original;
+			else if ( character.isAirControlForced || ! character.isGrounded )
 			{
-				Vector3 horizontal = velocity;
-				horizontal.y = 0;
+				Vector3 velocity = original;
+				if ( ! character.isFlying )
+					velocity.y = 0;
 
-				float increase = horizontal.magnitude / character.walkSpeed;
+				float increase = velocity.magnitude / character.walkSpeed;
 				GenericSkill hook = character.body.skillLocator?.FindSkillByFamilyName(
 						"LoaderBodySecondaryFamily");
 
-				if ( character.disableAirControlUntilCollision )
+				if ( character.disableAirControlUntilCollision && ! character.isFlying )
 				{
 					if ( ! character.body.isPlayerControlled
 							|| character.moveDirection == Vector3.zero
-						) return velocity;
-					else if ( hook && hook.stateMachine )
+						) return original;
+
+					if ( hook && hook.stateMachine )
 					{
 						var state = hook.stateMachine.state as EntityStates.Loader.FireHook;
 						if ( state?.isStuck is true )
-							return velocity;
-						else delta /= Mathf.Pow(character.acceleration, 0.25f);
+							return original;
+
+						delta *= 0.75f / Mathf.Pow(character.acceleration, 0.25f);
 					}
-					else delta *= 0.5f;
+					else
+					{
+						delta /= 1.5f;
+						if ( original.y > 0 )
+							delta /= Mathf.Pow(1.25f, original.y * original.magnitude / 750);
+					}
 				}
 				else increase = ( 1 + increase ) / 2;
 
@@ -104,17 +113,17 @@ namespace Local.Unlock.Momentum
 					target *= increase;
 					if ( hook is null )
 					{
-						delta *= 1 + ( horizontal.magnitude - character.walkSpeed ) * (
-								1 - Vector3.Dot(horizontal.normalized, target.normalized)
+						delta *= 1 + ( velocity.magnitude - character.walkSpeed ) * (
+								1 - Vector3.Dot(velocity.normalized, target.normalized)
 							) / ( character.acceleration * 0.25f );
 					}
 
 					if ( ! character.isFlying )
-						target.y = velocity.y;
+						target.y = original.y;
 				}
 			}
 
-			return Vector3.MoveTowards(velocity, target, delta);
+			return Vector3.MoveTowards(original, target, delta);
 		}
 
 		[HarmonyPatch(typeof(Transport), nameof(Transport.OnEnter))]
