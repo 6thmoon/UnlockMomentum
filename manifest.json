@@ -1,0 +1,10 @@
+{
+	"name": "UnlockMomentum",
+	"version_number": "0.1.5",
+	"website_url": "https://github.com/6thmoon/UnlockMomentum",
+	"description":
+		"Minimize loss of air control, due to high velocity and similar effects.",
+	"dependencies": [
+			"bbepis-BepInExPack-5.4.2100"
+		]
+}
