@@ -19,7 +19,7 @@ namespace Local.Unlock.Momentum
 	public class Plugin : BaseUnityPlugin
 	{
 		public const string identifier = "local.unlock.momentum";
-		public const string version = "0.1.5";
+		public const string version = "0.1.6";
 
 		public void Awake() => Patch();
 		private static Harmony instance = null;
@@ -72,21 +72,26 @@ namespace Local.Unlock.Momentum
 				Vector3 original, Vector3 target, float delta, CharacterMotor character)
 		{
 			if ( character.acceleration <= 0 ) return original;
-			else if ( character.isAirControlForced || ! character.isGrounded )
+			else if ( ! character.isGrounded || character.isAirControlForced )
 			{
 				Vector3 velocity = original;
 				if ( ! character.isFlying )
-					velocity.y = 0;
+					target.y = velocity.y = 0;
 
-				float increase = velocity.magnitude / character.walkSpeed;
-				GenericSkill hook = character.body.skillLocator?.FindSkillByFamilyName(
+				CharacterBody body = character.body;
+				float speed = Mathf.Max(target.magnitude, body.moveSpeed),
+						current = velocity.magnitude, increase = current / speed;
+
+				if ( ! body.isSprinting )
+					speed *= body.sprintingSpeedMultiplier;
+
+				GenericSkill hook = body.skillLocator?.FindSkillByFamilyName(
 						"LoaderBodySecondaryFamily");
 
 				if ( character.disableAirControlUntilCollision && ! character.isFlying )
 				{
-					if ( ! character.body.isPlayerControlled
-							|| character.moveDirection == Vector3.zero
-						) return original;
+					if ( ! body.isPlayerControlled || target == Vector3.zero )
+						return original;
 
 					if ( hook && hook.stateMachine )
 					{
@@ -105,22 +110,21 @@ namespace Local.Unlock.Momentum
 				}
 				else increase = ( 1 + increase ) / 2;
 
-				if ( increase > 1 && character.walkSpeed != 0 )
-				{
-					if ( ! character.isFlying )
-						target.y = 0;
-
+				if ( speed != 0 && increase > 1 )
 					target *= increase;
-					if ( hook is null )
-					{
-						delta *= 1 + ( velocity.magnitude - character.walkSpeed ) * (
-								1 - Vector3.Dot(velocity.normalized, target.normalized)
-							) / ( character.acceleration * 0.25f );
-					}
 
-					if ( ! character.isFlying )
-						target.y = original.y;
+				increase = current - speed;
+				if ( increase > 0 && hook is null )
+				{
+					float angle = 0.5f;
+					if ( target != Vector3.zero )
+						angle *= 1 - Vector3.Dot(velocity.normalized, target.normalized);
+
+					delta *= 1 + increase / ( character.acceleration * 0.15f ) * angle;
 				}
+
+				if ( ! character.isFlying )
+					target.y = original.y;
 			}
 
 			return Vector3.MoveTowards(original, target, delta);
